@@ -6,37 +6,31 @@
 #include <X11/Xlib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-#define UNSAFE_CHARS "`\"'()[]& "
+int main(int argc, char** argv)
+{
+    (void)argc;
 
-void run_command(char **argv) {
-  char arg_char;
-  char *arg;
-  char cmd[1024] = {0};
+    int rev;
+    Window win;
 
-  while ((arg = *++argv)) {
-    while ((arg_char = *arg++)) {
-      if (strchr(UNSAFE_CHARS, arg_char))
-        strcat(cmd, "\\");
-      strncat(cmd, &arg_char, 1);
+    Display* dis = XOpenDisplay(0);
+
+    XGetInputFocus(dis, &win, &rev);
+    XUnmapWindow(dis, win);
+    XFlush(dis);
+
+    int pid = fork();
+    if (pid == 0) {
+        execvp(argv[1], argv + 1);
+    } else {
+        wait(NULL);
     }
-    strcat(cmd, " ");
-  }
-  system(cmd);
-}
 
-int main(int argc, char **argv) {
-  int rev;
-  Window win;
-  Display *dis = XOpenDisplay(0);
+    XMapWindow(dis, win);
+    XCloseDisplay(dis);
 
-  XGetInputFocus(dis, &win, &rev);
-  XUnmapWindow(dis, win);
-  XFlush(dis);
-  run_command(argv);
-  XMapWindow(dis, win);
-  XCloseDisplay(dis);
-
-  (void)argc;
-  return 0;
+    return 0;
 }
